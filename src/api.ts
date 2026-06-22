@@ -90,10 +90,16 @@ export async function getBill(billId: number) {
   return request<{ bill: Bill; line_items: LineItem[] }>(`/bills/${billId}`);
 }
 
-export async function addLineItem(billId: number, description: string, amountMinor: number, currency: string, date: string) {
-  return request<{ accepted: boolean; bill_id: number }>(`/bills/${billId}/line-items`, {
+export async function addLineItem(billId: number, description: string, amountMinor: number, currency: string, date: string, idempotencyKey?: string) {
+  return request<{ accepted: boolean; bill_id: number; note: string }>(`/bills/${billId}/line-items`, {
     method: 'POST',
-    body: JSON.stringify({ description, amount_minor: amountMinor, currency, date }),
+    body: JSON.stringify({
+      description,
+      amount_minor: amountMinor,
+      currency,
+      date,
+      ...(idempotencyKey ? { idempotency_key: idempotencyKey } : {}),
+    }),
   });
 }
 
@@ -104,7 +110,7 @@ export async function cancelLineItem(billId: number, lineItemId: number) {
 }
 
 export async function closeBill(billId: number) {
-  return request<{ accepted: boolean; bill_id: number }>(`/bills/${billId}/close`, {
+  return request<{ bill: Bill; line_items: LineItem[] }>(`/bills/${billId}/close`, {
     method: 'POST',
   });
 }

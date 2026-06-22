@@ -43,12 +43,14 @@ export default function BillDetail() {
     setAdding(true);
     setError('');
     try {
-      await addLineItem(Number(id), description, Math.round(Number(amount) * 100), currency, date);
+      // Generate an idempotency key to prevent duplicates on retry
+      const idempotencyKey = `${id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      await addLineItem(Number(id), description, Math.round(Number(amount) * 100), currency, date, idempotencyKey);
       setShowAdd(false);
       setDescription('');
       setAmount('');
-      // Reload to get updated bill
-      setTimeout(load, 1000);
+      // Reload to get updated bill (async processing)
+      setTimeout(load, 1500);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to add line item');
     } finally {
@@ -69,8 +71,9 @@ export default function BillDetail() {
   async function handleClose() {
     if (!confirm('Close this bill? This cannot be undone.')) return;
     try {
-      await closeBill(Number(id));
-      setTimeout(load, 1000);
+      const res = await closeBill(Number(id));
+      setBill(res.bill);
+      setLineItems(res.line_items || []);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to close bill');
     }
